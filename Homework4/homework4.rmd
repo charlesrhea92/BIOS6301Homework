@@ -1,0 +1,54 @@
+---
+author: "Charles Rhea"
+title: 'Bios 6301: Assignment 4'
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+*Due Tuesday, 03 October, 1:00 PM*
+
+$5^{n=day}$ points taken off for each day late.
+
+20 points total.
+
+This assigment includes turning in the first three assignments. All three should
+include knitr files (named `homework1.rmd`, `homework2.rmd`, `homework3.rmd`, `homework4.rmd`)
+along with valid PDF output files. Inside each file, clearly indicate which
+parts of your responses go with which problems (you may use the original homework
+document as a template). Add your name as `author` to the file's metadata section.
+Raw R code/output or word processor files are not acceptable.
+
+Failure to properly name files or include author name may result in 5 points taken off.
+
+### Question 1 ###
+
+**10 points**
+
+1. Use GitHub to turn in the first four homework assignments. Make sure the teacher (couthcommander) and TA (mhblackman) are collaborators. (5 points)
+*Completed*
+
+1. Commit each assignment individually.  This means your repository should have at least four commits. (5 points)
+*Completed*
+
+### Question 2 ###
+
+**10 points**
+
+Use \LaTeX to create the following expressions.
+
+1.  $$P(B) = \sum_{j}^{} P(B | A_j)P(A_j), \\
+    \Rightarrow P(A_i | B) = \frac{P(B | A_i)P(A_i)}{\sum_{j}^{}P(B | A_j)P(A_j)}$$
+
+
+2. $$\hat{f}(\zeta) = \int\limits_{-\infty}^\infty f(\mathcal{x})e^{-2\pi i\mathcal{x}\zeta} d\mathcal{x}$$
+
+
+3. \[
+\textbf J = \frac{d\textbf f} {d\textbf x} = \left[\frac{\partial \textbf f} {\partial\mathcal{x}_1} \cdots \frac{\partial \textbf f} {\partial\mathcal{x}_n}\right] = \begin{bmatrix}
+     \frac{\partial f_1} {\partial\mathcal{x}_1} & \cdots & \frac{\partial f_1} {\partial\mathcal{x}_n} \\
+    \vdots & \ddots & \vdots \\
+    \frac{\partial f_m} {\partial\mathcal{x}_1} & \cdots & \frac{\partial f_m} {\partial\mathcal{x}_n}
+\end{bmatrix}
+\]
