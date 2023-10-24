@@ -1,0 +1,288 @@
+---
+title: 'BIOS 6301: Assignment 6'
+author: "Charlie Rhea"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+*Due Tuesday, 24 October, 1:00 PM*
+
+$5^{n=day}$ points taken off for each day late.
+
+40 points total.
+
+Submit a single knitr file (named `homework6.rmd`), along with a valid PDF output file. Inside the file, clearly indicate which parts of your responses go with which problems (you may use the original homework document as a template). Add your name as `author` to the file's metadata section. Raw R code/output or word processor files are not acceptable.
+
+Failure to name file `homework6.rmd` or include author name may result in 5 points taken off.
+
+### Question 1 ###
+
+**16 points**
+
+Obtain a copy of the [football-values lecture](https://github.com/couthcommander/football-values). Save the five 2023 CSV files in your working directory.
+
+Modify the code to create a function.  This function will create dollar values given information (as arguments) about a league setup.  It will return a data.frame and write this data.frame to a CSV file.  The final data.frame should contain the columns 'PlayerName', 'pos', 'points', 'value' and be ordered by value descendingly.  Do not round dollar values.
+
+Note that the returned data.frame should have `sum(posReq)*nTeams` rows.
+
+Define the function as such (10 points):
+
+```{r eval=FALSE}
+# path: directory path to input files
+# file: name of the output file; it should be written to path
+# nTeams: number of teams in league
+# cap: money available to each team
+# posReq: number of starters for each position
+# points: point allocation for each category
+
+path = '/Users/charlesrhea/Desktop/BIOS 6301 - Introduction to Statistical Computing/#Homework Assignments/Homework Assignment #6'
+ffvalues <- function(path, file='outfile.csv', nTeams=12, cap=200, posReq=c(qb=1, rb=2, wr=3, te=1, k=1),
+                     points=c(fg=4, xpt=1, pass_yds=1/25, pass_tds=4, pass_ints=-2,
+                              rush_yds=1/10, rush_tds=6, fumbles=-2, rec_yds=1/20, rec_tds=6)) {
+
+#1: Read in the 5 CSV files
+positions = c('k','qb','rb','te','wr')
+csvfile = paste('proj_', positions,'23.csv', sep='')
+datafiles = file.path(path, csvfile)
+names(datafiles) = positions
+
+k = read.csv(datafiles['k'])
+qb = read.csv(datafiles['qb'])
+rb = read.csv(datafiles['rb'])
+te = read.csv(datafiles['te'])
+wr = read.csv(datafiles['wr'])
+
+#2: Calculate Dollar Values
+#Merge into 1 dataset
+cols = unique(c(names(k), names(qb), names(rb), names(te), names(wr), "pos"))
+
+k[, setdiff(cols, names(k))] = 0
+k$pos = "k"
+qb[, setdiff(cols, names(qb))] = 0
+qb$pos = "qb"
+rb[, setdiff(cols, names(rb))] = 0
+rb$pos = "rb"
+te[, setdiff(cols, names(te))] = 0
+te$pos = "te"
+wr[, setdiff(cols, names(wr))] = 0
+wr$pos = "wr"
+
+x = rbind(k[,cols], qb[,cols], rb[,cols], te[,cols], wr[,cols])
+
+#3 Calculate Points per Player
+for (i in 1:length(points)){
+  x[, paste("p_", names(points[i]), sep ='' )] = x[, names(points[i])] * points[i] 
+  }
+x$points = rowSums(x[ , grep("^p_", names(x))])
+
+#4 Calculating Player Value
+#Rank players by points
+x = x[order(x[,'points'], decreasing=TRUE),]
+
+#Calculate marginal points by position
+x$marg = NA
+
+for (i in 1:length(names(posReq))){ 
+  if (posReq[i] != 0){
+x$marg[which(x$pos == names(posReq)[i])] = x$points[which(x$pos == names(posReq)[i])] - x$points[which(x$pos ==names(posReq)[i])[nTeams*posReq[i]]]
+}} 
+
+#Drop negative/missing marginal points
+x = na.omit(x)  
+x2 = x[x$marg >= 0,]
+
+#Order by marginal points
+x2 = x2[order(x2[,'marg'], decreasing=TRUE),]
+
+#Calculate dollar value (from Lecture #1)
+rownames(x2) <- NULL
+x2$value = ((cap*nTeams) - (nTeams*sum(posReq))) * (x2$marg/sum(x2$marg)) + 1
+
+#Final data.frame with needed information
+x3 = x2[,c('PlayerName','pos','points', 'value')]
+
+#Save as CSV file
+write.csv(x3, file = file)
+
+#Return data.frame with dollar values
+return(x3)
+}
+```
+
+1. Call `x1 <- ffvalues('.')`
+
+    1.  How many players are worth more than $20? (1 point)
+*44 players are worth more than $20*
+    ```{r}
+    #x1 <- ffvalues('.')
+    #sum(x1$value>20)
+    ```
+    
+    2.  Who is 15th most valuable running back (rb)? (1 point)
+ *Kenneth Walker III*
+    ```{r}
+    #x1$PlayerName[which(x1$pos == 'rb')[15]]
+    ```
+
+2. Call `x2 <- ffvalues(getwd(), '16team.csv', nTeams=16, cap=150)`
+
+    1.  How many players are worth more than $20? (1 point)
+*46 players are worth more than $20*
+    ```{r}
+    #x2 <- ffvalues(getwd(), '16team.csv', nTeams=16, cap=150)
+    #sum(x2$value>20)
+    ```
+    
+    2.  How many wide receivers (wr) are in the top 40? (1 point)
+*11 wide receivers are in the top 40*
+    ```{r}
+    #sum(which(x2$pos == 'wr')<41)
+    ```
+
+1. Call:
+
+    ```{r eval=FALSE}
+    #x3 <- ffvalues('.', 'qbheavy.csv', posReq=c(qb=2, rb=2, wr=3, te=1, k=0), 
+                          points=c(fg=0, xpt=0, pass_yds=1/25, pass_tds=6, pass_ints=-2,
+                          rush_yds=1/10, rush_tds=6, fumbles=-2, rec_yds=1/20, rec_tds=6))
+    ```
+
+    1.  How many players are worth more than $20? (1 point)
+*39 players are worth more than $20*
+    ```{r}
+    #sum(x3$value>20)
+    ```
+    
+    2.  How many quarterbacks (qb) are in the top 30? (1 point)
+*17 quarterbacks are in the top 40*
+    ```{r}
+    #sum(which(x3$pos == 'qb')<30)
+    ```
+
+### Question 2 ###
+
+**24 points**
+
+Import the HAART dataset (`haart.csv`) from the GitHub repository into R, and perform the following manipulations: (4 points each)
+```{r}
+library(readr)
+haart.ds <- read_csv("~/Desktop/BIOS 6301 - Introduction to Statistical Computing/datasets/haart.csv")
+View(haart.ds)
+```
+1. Convert date columns into a usable (for analysis) format.  Use the `table` command to display the counts of the year from `init.date`.
+```{r}
+haart.ds$init.date <- as.Date(haart.ds$init.date,"%m/%d/%y")
+haart.ds$last.visit <- as.Date(haart.ds$last.visit,"%m/%d/%y")
+haart.ds$date.death <- as.Date(haart.ds$date.death,"%m/%d/%y")
+
+haart.ds$years <- format(haart.ds$init.date, format = "%Y")
+table(haart.ds$years)
+```
+
+2. Create an indicator variable (one which takes the values 0 or 1 only) to represent death within 1 year of the initial visit.  How many observations died in year 1?
+*92 observations died in year 1*
+```{r}
+haart.ds$oneyeardeath_years <- difftime(haart.ds$date.death, haart.ds$init.date, unit = "weeks")/52.25
+haart.ds$oneyeardeath_years <- as.numeric(haart.ds$oneyeardeath_years)
+haart.ds$oneyeardeath_indi <- as.numeric(haart.ds$oneyeardeath_years < 1)
+table(haart.ds$oneyeardeath_indi)
+```
+
+3. Use the `init.date`, `last.visit` and `death.date` columns to calculate a followup time (in days), which is the difference between the first and either the last visit or a death event (whichever comes first). If these times are longer than 1 year, censor them (this means if the value is above 365, set followup to 365).  Print the quantile for this new variable.
+*See output below*
+```{r}
+#Collapse the last.visit and death.date into a single column and take the value of the date that occurred first
+haart.ds$followup_refdate <- apply(haart.ds[,c(10,12)],1,min,na.rm = TRUE)
+
+#Determine follow-up time from init.date to followup_refdate by number of days
+haart.ds$followup_days <- round(difftime(haart.ds$followup_refdate, haart.ds$init.date, unit = "days"), 0)
+#Censor, or replace those with a follow-up time > 365 with the value 365; print quantiles of this variable
+haart.ds$followup_daysCENSOR <- replace(haart.ds$followup_days, haart.ds$followup_days > 365, 365)
+print(quantile(haart.ds$followup_daysCENSOR, na.rm = TRUE))
+```
+
+4. Create another indicator variable representing loss to followup; this means the observation is not known to be dead but does not have any followup visits after the first year.  How many records are lost-to-followup?
+*173 records were lost to follow-up*
+```{r}
+#Create variable to indicate observations who are not known to be dead (death = 0) and whose follow-up time is less than a year (followup_days < 365), assgin them value of 1; Use table to determine number of observations who meet both criteria
+haart.ds$losstofollowup <- NA
+haart.ds[haart.ds$death == 0 & haart.ds$followup_days < 365, "losstofollowup"] <- 1
+table(haart.ds$losstofollowup)
+```
+
+5. Recall our work in class, which separated the `init.reg` field into a set of indicator variables, one for each unique drug. Create these fields and append them to the database as new columns.  Which drug regimen are found over 100 times?
+*Two regimens are found over 100 times - 3TC, AZT, and EVF (421 times), and 3TC, AZT, and NVP (284 times)*
+```{r}
+#Create a variable that contains a list to determine the number of times a regimen has be perscribed
+init.reg <- as.character(haart.ds$init.reg)
+(haart.ds[['init.reg_list']] <- strsplit(init.reg, ","))[1:3]
+table(haart.ds$init.reg)
+
+#Unlist to identify the name and total number of each unique drug 
+unlist(haart.ds$init.reg_list)[seq(50)]
+(all_drugs <- unique(unlist(haart.ds$init.reg_list)))
+
+#Create a matrix (1000 rows for 1000 observations, and 18 variables for 18 unique drugs) to and search through each observation to determine which drugs appears in their regimen - 0 = no, 1 = yes
+reg_drugs <- matrix(0, nrow=nrow(haart.ds), ncol=length(all_drugs))
+for(i in seq_along(all_drugs)) {
+  reg_drugs[,i] <- sapply(haart.ds$init.reg_list, function(x) all_drugs[i] %in% x)
+}
+
+#Martix results in a data frame to ease evaluation and allow for appending to original dataset
+reg_drugs <- data.frame(reg_drugs)
+names(reg_drugs) <- all_drugs
+head(reg_drugs)
+
+#Appending drug data frame to original dataset
+haart.ds_2 <- cbind(haart.ds, reg_drugs)
+head(haart.ds_2)
+```
+
+6. The dataset `haart2.csv` contains a few additional observations for the same study. Import these and append them to your master dataset (if you were smart about how you coded the previous steps, cleaning the additional observations should be easy!).  Show the first five records and the last five records of the complete (and clean) data set.
+*See head output for first 5 observations, and tail output for last 5 observations below*
+```{r}
+haart2.ds <- read_csv("~/Desktop/BIOS 6301 - Introduction to Statistical Computing/datasets/haart2.csv")
+haart_orig.ds <- read_csv("~/Desktop/BIOS 6301 - Introduction to Statistical Computing/datasets/haart.csv")
+final_haart.ds <- rbind(haart_orig.ds, haart2.ds)
+View(final_haart.ds)
+
+final_haart.ds$init.date <- as.Date(final_haart.ds$init.date,"%m/%d/%y")
+final_haart.ds$last.visit <- as.Date(final_haart.ds$last.visit,"%m/%d/%y")
+final_haart.ds$date.death <- as.Date(final_haart.ds$date.death,"%m/%d/%y")
+
+final_haart.ds$oneyeardeath_years <- difftime(final_haart.ds$date.death, final_haart.ds$init.date, unit = "weeks")/52.25
+final_haart.ds$oneyeardeath_years <- as.numeric(final_haart.ds$oneyeardeath_years)
+final_haart.ds$oneyeardeath_indi <- as.numeric(final_haart.ds$oneyeardeath_years < 1)
+
+final_haart.ds$followup_refdate <- apply(final_haart.ds[,c(10,12)],1,min,na.rm = TRUE)
+final_haart.ds$followup_days <- round(difftime(final_haart.ds$followup_refdate, final_haart.ds$init.date, unit = "days"), 0)
+final_haart.ds$followup_daysCENSOR <- replace(final_haart.ds$followup_days, final_haart.ds$followup_days > 365, 365)
+
+final_haart.ds$losstofollowup <- NA
+final_haart.ds[final_haart.ds$death == 0 & final_haart.ds$followup_days < 365, "losstofollowup"] <- 1
+
+#Drug regimen, and indicator variables for each unique drug
+init.reg <- as.character(final_haart.ds$init.reg)
+(final_haart.ds[['init.reg_list']] <- strsplit(init.reg, ","))[1:3]
+
+unlist(final_haart.ds$init.reg_list)[seq(50)]
+(all_drugs <- unique(unlist(final_haart.ds$init.reg_list)))
+
+reg_drugs <- matrix(0, nrow=nrow(final_haart.ds), ncol=length(all_drugs))
+for(i in seq_along(all_drugs)) {
+  reg_drugs[,i] <- sapply(final_haart.ds$init.reg_list, function(x) all_drugs[i] %in% x)
+}
+
+reg_drugs <- data.frame(reg_drugs)
+names(reg_drugs) <- all_drugs
+head(reg_drugs)
+
+final2_haart.ds <- cbind(final_haart.ds, reg_drugs)
+head(final2_haart.ds, 5)
+```
+
+```{r}
+tail(final2_haart.ds, 5)
+```
