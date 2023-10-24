@@ -29,7 +29,7 @@ Note that the returned data.frame should have `sum(posReq)*nTeams` rows.
 
 Define the function as such (10 points):
 
-```{r eval=FALSE}
+```{r eval=TRUE}
 # path: directory path to input files
 # file: name of the output file; it should be written to path
 # nTeams: number of teams in league
@@ -116,14 +116,14 @@ return(x3)
     1.  How many players are worth more than $20? (1 point)
 *44 players are worth more than $20*
     ```{r}
-    #x1 <- ffvalues('.')
-    #sum(x1$value>20)
+    x1 <- ffvalues('.')
+    sum(x1$value>20)
     ```
     
     2.  Who is 15th most valuable running back (rb)? (1 point)
  *Kenneth Walker III*
     ```{r}
-    #x1$PlayerName[which(x1$pos == 'rb')[15]]
+    x1$PlayerName[which(x1$pos == 'rb')[15]]
     ```
 
 2. Call `x2 <- ffvalues(getwd(), '16team.csv', nTeams=16, cap=150)`
@@ -131,20 +131,20 @@ return(x3)
     1.  How many players are worth more than $20? (1 point)
 *46 players are worth more than $20*
     ```{r}
-    #x2 <- ffvalues(getwd(), '16team.csv', nTeams=16, cap=150)
-    #sum(x2$value>20)
+    x2 <- ffvalues(getwd(), '16team.csv', nTeams=16, cap=150)
+    sum(x2$value>20)
     ```
     
     2.  How many wide receivers (wr) are in the top 40? (1 point)
 *11 wide receivers are in the top 40*
     ```{r}
-    #sum(which(x2$pos == 'wr')<41)
+    sum(which(x2$pos == 'wr')<41)
     ```
 
 1. Call:
 
-    ```{r eval=FALSE}
-    #x3 <- ffvalues('.', 'qbheavy.csv', posReq=c(qb=2, rb=2, wr=3, te=1, k=0), 
+    ```{r eval=TRUE}
+    x3 <- ffvalues('.', 'qbheavy.csv', posReq=c(qb=2, rb=2, wr=3, te=1, k=0), 
                           points=c(fg=0, xpt=0, pass_yds=1/25, pass_tds=6, pass_ints=-2,
                           rush_yds=1/10, rush_tds=6, fumbles=-2, rec_yds=1/20, rec_tds=6))
     ```
@@ -152,13 +152,13 @@ return(x3)
     1.  How many players are worth more than $20? (1 point)
 *39 players are worth more than $20*
     ```{r}
-    #sum(x3$value>20)
+    sum(x3$value>20)
     ```
     
     2.  How many quarterbacks (qb) are in the top 30? (1 point)
 *17 quarterbacks are in the top 40*
     ```{r}
-    #sum(which(x3$pos == 'qb')<30)
+    sum(which(x3$pos == 'qb')<30)
     ```
 
 ### Question 2 ###
