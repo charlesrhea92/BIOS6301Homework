@@ -1,0 +1,235 @@
+---
+author: 'Charles Rhea'
+title: 'BIOS 6301: Assignment 7'
+output: pdf_document
+---
+
+*Due Thursday, 02 November, 1:00 PM*
+
+$5^{n=day}$ points taken off for each day late.
+
+40 points total.
+
+Submit a single knitr file (named `homework7.rmd`), along with a valid PDF output file. Inside the file, clearly indicate which parts of your responses go with which problems (you may use the original homework document as a template). Add your name as `author` to the file's metadata section. Raw R code/output or word processor files are not acceptable.
+
+Failure to name file `homework7.rmd` or include author name may result in 5 points taken off.
+
+### Question 1 ###
+
+**21 points**
+
+Use the following code to generate data for patients with repeated measures of A1C (a test for levels of blood glucose).
+
+```{r}
+genData <- function(n) {
+    if(exists(".Random.seed", envir = .GlobalEnv)) {
+        save.seed <- get(".Random.seed", envir= .GlobalEnv)
+        on.exit(assign(".Random.seed", save.seed, envir = .GlobalEnv))
+    } else {
+        on.exit(rm(".Random.seed", envir = .GlobalEnv))
+    }
+    set.seed(n)
+    subj <- ceiling(n / 10)
+    id <- sample(subj, n, replace=TRUE)
+    times <- as.integer(difftime(as.POSIXct("2005-01-01"), as.POSIXct("2000-01-01"), units='secs'))
+    dt <- as.POSIXct(sample(times, n), origin='2000-01-01')
+    mu <- runif(subj, 4, 10)
+    a1c <- unsplit(mapply(rnorm, tabulate(id), mu, SIMPLIFY=FALSE), id)
+    data.frame(id, dt, a1c)
+}
+x <- genData(500)
+```
+
+Perform the following manipulations: (3 points each)
+
+1. Order the data set by `id` and `dt`.
+```{r}
+x2 <- x[order(x$id, x$dt), ]
+```
+
+2. For each `id`, determine if there is more than a one year gap in between observations.  Add a new row at the one year mark, with the `a1c` value set to missing.  A two year gap would require two new rows, and so forth.
+```{r}
+library(lubridate)
+x3 <- x2
+x3$tdiff <- unlist(tapply(x3$dt, INDEX = x3$id,
+                          FUN = function(x) c(0, `units<-`(diff(x), "days"))))
+x3$tdiff_years <- as.numeric(floor((x3$tdiff / 365.4)))
+
+#Subset by rows with 1 and 2 missing years
+one_miss <- subset(x3, c(x3$tdiff_years == 1))
+two_miss <- subset(x3, c(x3$tdiff_years == 2))
+
+#Adding 1 additional row to one_miss subset
+one_miss_2 <- one_miss[rep(1:nrow(one_miss), (one_miss$tdiff_years == 1) +1), ]
+one_miss_2$a1c[duplicated(one_miss_2$a1c)] <- NA
+one_miss_2$dt[duplicated(one_miss_2$dt)] = one_miss_2$dt[duplicated(one_miss_2$dt)] - years(1)
+
+#Adding 2 additional rows to two_miss subset
+two_miss_2 <- two_miss[rep(1:nrow(two_miss), (two_miss$tdiff_years == 2) +2), ]
+two_miss_2$a1c[duplicated(two_miss_2$a1c)] <- NA
+two_miss_2$dt[duplicated(two_miss_2$dt)] = two_miss_2$dt[duplicated(two_miss_2$dt)] - years(1)
+two_miss_2$dt[duplicated(two_miss_2$dt)] = two_miss_2$dt[duplicated(two_miss_2$dt)] - years(1)
+
+#Binding subsets back into the original dataset
+bind1 <- rbind(x3, one_miss_2)
+bind2 <- rbind(bind1, two_miss_2)
+
+x4 <- bind2[order(bind2$id, bind2$dt), ]
+```
+
+3. Create a new column `visit`.  For each `id`, add the visit number.  This should be 1 to `n` where `n` is the number of observations for an individual.  This should include the observations created with missing a1c values.
+```{r}
+library(plyr)
+library(dplyr)
+
+x4$number <- 1
+x4 <- x4 %>%
+  group_by(id) %>%
+  mutate(visit = cumsum(number))
+x4 <- x4[-c(6)]
+head(x4)
+```
+
+4. For each `id`, replace missing values with the mean `a1c` value for that individual.
+```{r}
+impute.mean <- function(x) replace(x, is.na(x), mean(x, na.rm = TRUE))
+x_final <- ddply(x4, ~ id, transform, a1c = impute.mean(a1c))
+x_final <- x_final[order(x_final$id, x_final$dt),]
+head(x_final)
+```
+
+5. Print mean `a1c` for each `id`.
+```{r}
+group_mean <- aggregate(x = x_final$a1c, by=list(x_final$id), FUN=mean)
+print(group_mean)
+```
+
+6. Print total number of visits for each `id`.
+```{r}
+total_visits <- aggregate(x = x_final$visit, by=list(x_final$id), FUN=length)
+print(total_visits)
+```
+
+7. Print the observations for `id = 15`.
+```{r}
+print(x_final[x_final$id ==15, ])
+```
+
+### Question 2 ###
+
+**16 points**
+
+Install the `lexicon` package. Load the `sw_fry_1000` vector, which contains 1,000 common words.
+
+```{r}
+library(lexicon)
+data('sw_fry_1000', package = 'lexicon')
+```
+
+1. Remove all non-alphabetical characters and make all characters lowercase. Save the result as `a`.
+```{r}
+a <- tolower(sub('[^a-zA-Z]', '', sw_fry_1000))
+head(a)
+```
+
+Use vector `a` for the following questions. (2 points each)
+
+2. How many words contain the string "ar"?
+
+*64 words contain the string "ar".*
+```{r}
+length(unique(grep('ar', a)))
+```
+
+3. Find a six-letter word that starts with "l" and ends with "r".
+
+*Using the 'grep' command, we find that "letter" meets these criteria.*
+```{r}
+grep("^l.*{6}.*r$", a, value = TRUE)
+```
+
+4. Return all words that start with "col" or end with "eck".
+
+*Using the 'grep' command, we find the words "color", "cold", "check", "collect", "colony", "column", and "neck" meets these criteria.*
+```{r}
+grep("^col|eck$", a, value = TRUE)
+```
+
+5. Find the number of words that contain 4 or more adjacent consonants. Assume "y" is always a consonant.
+
+*There are 8 words in this vector which contain 4 or more adjacent consonants*
+```{r}
+length(unique(grep("[^aeiou]{4,}", a)))
+#a[c(206, 467, 529, 537, 575, 642, 708, 785)]
+```
+
+6. Return all words with a "q" that isn't followed by a "ui".
+
+*Using the 'grep' command, we find the words question, equate, square, equal, quart, and quotient meet these criteria*
+```{r}
+grep("q.[^ui]", a, value = TRUE)
+```
+
+7. Find all words that contain a "k" followed by another letter. Run the `table` command on the first character following the first "k" of each word.
+
+*Using the 'grep' command, we find the words like, make, know, take, kind, keep, knew, king, sky, kept, broke, kill, lake, key, skin, spoke, skill, and market meet these criteria*
+```{r}
+grep("[k][a-z]", a, value = TRUE)
+```
+
+*We extracted the letter after 'k' within each of these 10 words, then ran the 'table' function on this vector. We found there are three unique characters: e (4 times), i (4 times), and n (2 times).*
+```{r}
+a2 <- grep("[k][a-z]", a, value = TRUE)
+a2 <- sub("^.*[k](.).*$", '\\1', a2)
+table(a2)
+```
+
+8. Remove all vowels. How many character strings are found exactly once?
+
+*There are 581 character strings that are found once after removing the vowels*
+```{r}
+a3 <- gsub("[aeiou]", "", a)
+length(which(table(a3) == 1))
+```
+
+### Question 3 ###
+
+**3 points**
+
+The first argument to most functions that fit linear models are formulas.  The following example defines the response variable `death` and allows the model to incorporate all other variables as terms. `.` is used to mean all columns not otherwise in the formula.
+
+```{r}
+#Note - I could not get this URL to work/connect to the dataset; will import the dataset using 'read_csv'.
+#url <- "https://github.com/couthcommander/Bios6301/raw/master/datasets/haart.csv"
+library(readr)
+haart.df <- read_csv("~/Desktop/BIOS 6301 - Introduction to Statistical Computing/datasets/haart.csv")
+haart_df2 <- haart.df[,c('death','weight','hemoglobin','cd4baseline')]
+coef(summary(glm(death ~ ., data=haart_df2, family=binomial(logit))))
+```
+
+Now imagine running the above several times, but with a different response and data set each time.  Here's a function:
+
+```{r}
+myfun <- function(dat, response) {
+  form <- as.formula(response ~ .)
+  coef(summary(glm(form, data=dat, family=binomial(logit))))
+}
+```
+
+Unfortunately, it doesn't work. `tryCatch` is "catching" the error so that this file can be knit to PDF.
+
+```{r}
+tryCatch(myfun(haart_df2, death), error = function(e) e)
+```
+
+What do you think is going on?  Consider using `debug` to trace the problem.
+
+*After evaluating, the issue appears to lies within the "form <- as.formula(response ~ .)" line of code. This is where we are establishing the first element that will go in the 'glm' function, the dependent variable - for example, in the first part of this problem this was "death". However, within this line of code, we do not direct R to a data source for this variable. Again, if 'response' = 'death' in this line, there is not a way for us to direct R to know these 'death' is coming from. As a result, when we run this function, it will return an error stating that the 'response' variable assigned cannot be found.*
+```{r}
+#debug(myfun)
+#myfun()
+```
+
+**5 bonus points**
+
+Create a working function.
