@@ -1,0 +1,174 @@
+---
+title: 'BIOS 6301: Assignment 9'
+author: "Charlie Rhea"
+output:
+  html_document:
+    df_print: paged
+---
+
+*Due Tuesday, 28 November, 1:00 PM*
+
+$5^{n=day}$ points taken off for each day late.
+
+40 points total.
+
+Submit a single knitr file (named `homework9.rmd`), along with a valid PDF output file. Inside the file, clearly indicate which parts of your responses go with which problems (you may use the original homework document as a template). Add your name as `author` to the file's metadata section. Raw R code/output or word processor files are not acceptable.
+
+Failure to name file `homework9.rmd` or include author name may result in 5 points taken off.
+
+### Question 1 ###
+
+**15 points**
+
+Consider the following very simple genetic model (*very* simple -- don't worry if you're not a geneticist!). A population consists of equal numbers of two sexes: male and female. At each generation men and women are paired at random, and each pair produces exactly two offspring, one male and one female. We are interested in the distribution of height from one generation to the next. Suppose that the height of both children is just the average of the height of their parents, how will the distribution of height change across generations?
+
+Represent the heights of the current generation as a dataframe with two variables, m and f, for the two sexes. We can use `rnorm` to randomly generate the population at generation 1:
+
+```{r}
+pop <- data.frame(m = rnorm(100, 160, 20), f = rnorm(100, 160, 20))
+```
+
+The following function takes the data frame `pop` and randomly permutes the ordering of the men. Men and women are then paired according to rows, and heights for the next generation are calculated by taking the mean of each row. The function returns a data frame with the same structure, giving the heights of the next generation.
+
+```{r}
+next_gen <- function(pop) {
+    pop$m <- sample(pop$m)
+    pop$m <- rowMeans(pop)
+    pop$f <- pop$m
+    pop
+}
+```
+
+Use the function `next_gen` to generate nine generations (you already have the first), then use the function `hist` to plot the distribution of male heights in each generation (this will require multiple calls to `hist`). The phenomenon you see is called regression to the mean.  Provide (at least) minimal decorations such as title and x-axis labels.
+```{r}
+gen1 <- pop
+gen2 <- next_gen(gen1)
+gen3 <- next_gen(gen2)
+gen4 <- next_gen(gen3)
+gen5 <- next_gen(gen4)
+gen6 <- next_gen(gen5)
+gen7 <- next_gen(gen6)
+gen8 <- next_gen(gen7)
+gen9 <- next_gen(gen8)
+gen10 <- next_gen(gen9)
+
+#Graphing of Generation #1
+hist(gen1$m,col='red',main="High Frequency of First Generation Males",xlab='Height (cm)', ylab='Number of Cases', xlim = c(110,220))
+
+#Graphing of Generation #2
+hist(gen2$m,col='orange',main="High Frequency of Second Generation Males",xlab='Height (cm)', ylab='Number of Cases', xlim = c(110,220))
+
+#Graphing of Generation #3
+hist(gen3$m,col='yellow',main="High Frequency of Third Generation Males",xlab='Height (cm)', ylab='Number of Cases', xlim = c(110,220))
+
+#Graphing of Generation #4
+hist(gen4$m,col='green',main="High Frequency of Forth Generation Males",xlab='Height (cm)', ylab='Number of Cases', xlim = c(110,220))
+
+#Graphing of Generation #5
+hist(gen5$m,col='blue',main="High Frequency of Fifth Generation Males",xlab='Height (cm)', ylab='Number of Cases', xlim = c(110,220))
+
+#Graphing of Generation #6
+hist(gen6$m,col='purple',main="High Frequency of Sixth Generation Males",xlab='Height (cm)', ylab='Number of Cases', xlim = c(110,220))
+
+#Graphing of Generation #7
+hist(gen7$m,col='pink',main="High Frequency of Seveth Generation Males",xlab='Height (cm)', ylab='Number of Cases', xlim = c(110,220))
+
+#Graphing of Generation #8
+hist(gen8$m,col='black',main="High Frequency of Eighth Generation Males",xlab='Height (cm)', ylab='Number of Cases', xlim = c(110,220))
+
+#Graphing of Generation #9
+hist(gen9$m,col='gray',main="High Frequency of Ninth Generation Males",xlab='Height (cm)', ylab='Number of Cases', xlim = c(110,220))
+
+#Graphing of Generation #10
+hist(gen10$m,col='gold',main="High Frequency of Tenth Generation Males",xlab='Height (cm)', ylab='Number of Cases', xlim = c(110,220))
+```
+
+### Question 2 ###
+
+**10 points**
+
+Use the simulated results from question 1 to reproduce (as closely as possible) the following plot in ggplot2.
+
+![generations plot](http://d.pr/i/Xh0d+)
+```{r}
+#Add generation designation variable to each individual dataset
+gen1$gen <- 1 
+gen2$gen <- 2
+gen3$gen <- 3 
+gen4$gen <- 4 
+gen5$gen <- 5 
+gen6$gen <- 6 
+gen7$gen <- 7 
+gen8$gen <- 8 
+gen9$gen <- 9 
+gen10$gen <- 10 
+
+#Combine individual datasets
+gen_comb <- rbind(gen1, gen2, gen3, gen4, gen5, gen6, gen7, gen8, gen9, gen10)
+
+#Origin plot with whole dataset
+library(ggplot2)
+p <- ggplot(data=gen_comb) + geom_point(mapping = aes(x=m, y=f))
+p + facet_wrap(~ gen)
+```
+
+### Question 3 ###
+
+**15 points**
+
+You calculated the power of a study design in question #1 of assignment 3. The study has two variables, treatment group and outcome. There are two treatment groups (0, 1) and they should be assigned randomly with equal probability. The outcome should be a random normal variable with a mean of 60 and standard deviation of 20. If a patient is in the treatment group, add 5 to the outcome.
+
+Starting with a sample size of 250, create a 95% bootstrap percentile interval for the mean of each group. Then create a new bootstrap interval by increasing the sample size by 250 until the sample is 2500. Thus you will create a total of 10 bootstrap intervals.  Each bootstrap should create 1000 bootstrap samples. (9 points)
+```{r}
+#Note - was unable to complete the bootstrapping CIs - ran out of time, so I calcuated regular CIs in order to complete the graph in the next part of this question.
+results <- matrix(nrow=10, ncol=6)
+ns <- seq(from = 250, to = 2500, by=250)
+noTreat <- matrix(nrow=10, ncol=4)
+yesTreat <- matrix(nrow=10, ncol=4)
+
+for(i in seq(nrow(results))) {
+  n <- ns[i]
+  treatment <- rbinom(n, size = 1, prob = 0.5)
+  outcome <- rnorm(n, 60, 20)
+  outcome_2 <- ifelse(treatment == 1, outcome+5, outcome)
+  x <- outcome_2[treatment==0]
+  noTreat[i,1] <- mean(x)
+  noTreat[i,2] <- mean(x) + qnorm(0.025) * sd(x) / sqrt(length(x))
+  noTreat[i,3] <- mean(x) + qnorm(0.975) * sd(x) / sqrt(length(x))
+  noTreat[i,4] <- 0
+  y <- outcome_2[treatment==1]
+  yesTreat[i,1] <- mean(y)
+  yesTreat[i,2] <- mean(y) + qnorm(0.025) * sd(y) / sqrt(length(y))
+  yesTreat[i,3] <- mean(y) + qnorm(0.975) * sd(y) / sqrt(length(y))
+  yesTreat[i,4] <- 1
+}
+```
+
+Produce a line chart that includes the bootstrapped mean and lower and upper percentile intervals for each group.  Add appropriate labels and a legend. (6 points)
+
+You may use base graphics or ggplot2.  It should look similar to this (in base).
+
+![bp interval plot](bpi.jpg)
+```{r}
+noTreat <- as.data.frame(noTreat)
+yesTreat <- as.data.frame(yesTreat)
+
+Samples <- seq(1, 10, by = 1)
+noTreat <- cbind(Samples, noTreat)
+yesTreat <- cbind(Samples, yesTreat)
+combData <- rbind(noTreat, yesTreat)
+
+#g <- ggplot(results2, aes(gens, V1)) +                                      
+  #geom_line(color = "dark red", size = 1) + 
+  #geom_ribbon(aes(ymin=V2, ymax=V3), alpha=0.5, fill = "red",  
+              #color = "black", linetype = "dotted")
+
+#g2 <- ggplot(results2, aes(gens, V4)) +                                      
+  #geom_line(color = "dark blue", size = 1) + 
+  #geom_ribbon(aes(ymin=V5, ymax=V6), alpha=0.5, fill = "blue",  
+              #color = "black", linetype = "dotted")
+  
+ggplot(combData, aes(x=Samples, y=V1, group=V4, colour=V4)) + 
+  geom_ribbon(aes(ymin=V2, ymax=V3, fill=V4), alpha=0.2) +
+  geom_line()
+```
